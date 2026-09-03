@@ -13,7 +13,9 @@ APP="$BUILD_DIR/Vox.app"
 DEV_IDENTITY_NAME="${VOX_IDENTITY_NAME:-Vox Dev}"
 if [ -n "${VOX_SIGN_IDENTITY:-}" ]; then
     SIGN_IDENTITY="$VOX_SIGN_IDENTITY"
-elif security find-identity -v -p codesigning 2>/dev/null | grep -qF "$DEV_IDENTITY_NAME"; then
+# Без -v: самоподписанный сертификат не считается «valid» и в тот список
+# не попадает, поэтому поиск с -v был ложно-отрицательным и молча оставлял ad-hoc.
+elif security find-identity -p codesigning 2>/dev/null | grep -qF "\"$DEV_IDENTITY_NAME\""; then
     SIGN_IDENTITY="$DEV_IDENTITY_NAME"
 else
     SIGN_IDENTITY="-"

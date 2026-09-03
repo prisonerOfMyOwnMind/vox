@@ -39,5 +39,16 @@ if [ "$SIG" = "adhoc" ]; then
     printf '  Постоянная подпись: bash scripts/dev-identity.sh, затем пересоберите и поставьте заново.\n'
 fi
 
-open "$DEST"
-printf 'запущено. Иконка микрофона должна появиться в menu bar.\n'
+open "$DEST" || die "LaunchServices не смог запустить $DEST"
+
+# Не рапортовать об успехе, не убедившись. Раньше скрипт печатал «запущено»
+# сразу после open, и запуск, не успевший состояться, выглядел как успешный.
+for _ in $(seq 1 20); do
+    pgrep -qf "$DEST/Contents/MacOS/Vox" && break
+    sleep 0.5
+done
+pgrep -qf "$DEST/Contents/MacOS/Vox" \
+    || die "приложение не поднялось за 10 с. Журнал: log show --predicate 'subsystem == \"local.vox.Vox\"' --last 5m"
+
+printf 'запущено (pid %s). Иконка микрофона должна появиться в menu bar.\n' \
+    "$(pgrep -f "$DEST/Contents/MacOS/Vox" | head -1)"
