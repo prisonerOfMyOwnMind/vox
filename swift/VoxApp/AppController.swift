@@ -1,4 +1,5 @@
 import AppKit
+import os
 import Foundation
 import VoxClean
 import VoxCore
@@ -6,9 +7,31 @@ import VoxSTT
 
 /// Журнал. Пишет только состояния и причины отказов: ни аудио, ни расшифровки,
 /// ни буфера обмена, ни нажатых клавиш здесь быть не может.
+/// Журнал приложения.
+///
+/// Пишет в системный лог macOS, потому что stderr у приложения, запущенного из
+/// Finder, не виден никому — из-за этого первое живое падение осталось без
+/// диагностики. Читать: `log stream --predicate 'subsystem == "local.vox.Vox"'`
+/// или Console.app.
+///
+/// В журнал НЕ попадают: аудио, расшифровки, буфер обмена, содержимое активного
+/// приложения и нажатые клавиши. Только состояния, форматы, счётчики и тексты
+/// собственных ошибок. Строки помечены `privacy: .public` осознанно: в них по
+/// построению нет пользовательских данных.
 enum AppLog {
+    private static let logger = Logger(subsystem: "local.vox.Vox", category: "vox")
+
+    /// Уровень `notice`, а не `info`: info-записи не сохраняются в постоянный
+    /// лог и не видны в `log show` без флага `--info`. Объём мал — несколько
+    /// строк на диктовку, — а диагностика после падения важнее экономии.
     static func note(_ line: String) {
+        logger.notice("\(line, privacy: .public)")
         FileHandle.standardError.write(Data("vox: \(line)\n".utf8))
+    }
+
+    static func problem(_ line: String) {
+        logger.error("\(line, privacy: .public)")
+        FileHandle.standardError.write(Data("vox: ОШИБКА \(line)\n".utf8))
     }
 }
 
@@ -102,8 +125,21 @@ final class AppController: NSObject, NSApplicationDelegate {
 
     private func stopAndTranscribe() {
         guard state == .recording else { return }
-        let samples = recorder.stop()
+        let outcome = recorder.stop()
+        let samples = outcome.samples
         indicator.showProcessing()
+        AppLog.note(
+            "запись остановлена: \(String(format: "%.2f", samples.durationSeconds)) с, "
+            + "буферов принято \(outcome.acceptedBuffers), отброшено \(outcome.droppedBuffers)")
+
+        // Тракт звука сломался посреди записи — например, сменилось устройство
+        // входа. Молчать нельзя, и нельзя валить это на длительность: причина
+        // другая, и сообщение про короткую запись увело бы в сторону.
+        if let reason = outcome.failure {
+            AppLog.problem("звуковой тракт отказал: \(reason)")
+            fail(VoxError.transcriptionFailed(reason), retrySafe: true)
+            return
+        }
 
         guard samples.durationSeconds >= AudioRecorder.minimumSeconds else {
             fail(

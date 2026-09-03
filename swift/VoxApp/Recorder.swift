@@ -22,6 +22,11 @@ private final class SampleSink: @unchecked Sendable {
     private let lock = NSLock()
     private var values: [Float] = []
     private var accepting = false
+    private var accepted = 0
+    private var dropped = 0
+    /// Первая причина отказа преобразования. Дальше не переписывается:
+    /// важна причина, с которой всё началось, а не последняя из сотни.
+    private var firstFailure: String?
     private let converter: AVAudioConverter
     private let target: AVAudioFormat
     private let ratio: Double
@@ -42,13 +47,14 @@ private final class SampleSink: @unchecked Sendable {
     }
 
     /// Запрещает добавление samples и отдаёт накопленное, очищая копилку.
-    func closeAndTake() -> [Float] {
+    func closeAndTake() -> (values: [Float], accepted: Int, dropped: Int, failure: String?) {
         lock.lock()
         accepting = false
         let taken = values
+        let counts = (accepted, dropped, firstFailure)
         values.removeAll(keepingCapacity: false)
         lock.unlock()
-        return taken
+        return (taken, counts.0, counts.1, counts.2)
     }
 
     func discard() {
@@ -77,7 +83,21 @@ private final class SampleSink: @unchecked Sendable {
             status.pointee = .haveData
             return pending
         }
-        guard error == nil, output.frameLength > 0, let channel = output.floatChannelData?[0] else { return }
+        guard error == nil, output.frameLength > 0, let channel = output.floatChannelData?[0] else {
+            // Раньше здесь стоял молчаливый return: звук пропадал, индикатор
+            // продолжал показывать запись, а на выходе пользователь получал
+            // сообщение про слишком короткую запись, к делу не относящееся.
+            // Журналировать прямо тут нельзя — это realtime-поток; поэтому
+            // считаем и отдаём наверх при остановке.
+            lock.lock()
+            dropped += 1
+            if firstFailure == nil {
+                firstFailure = error.map { "преобразование звука отказало: \($0.localizedDescription)" }
+                    ?? "преобразование звука не дало кадров"
+            }
+            lock.unlock()
+            return
+        }
 
         let frames = Int(output.frameLength)
         var sumOfSquares: Float = 0
@@ -85,7 +105,10 @@ private final class SampleSink: @unchecked Sendable {
         let rms = (sumOfSquares / Float(frames)).squareRoot()
 
         lock.lock()
-        if accepting { values.append(contentsOf: UnsafeBufferPointer(start: channel, count: frames)) }
+        if accepting {
+            values.append(contentsOf: UnsafeBufferPointer(start: channel, count: frames))
+            accepted += 1
+        }
         lock.unlock()
 
         onLevel(rms)
@@ -104,6 +127,24 @@ final class AudioRecorder {
 
     /// Уровень приходит на главный поток примерно с частотой аудиобуферов.
     var onLevel: (@MainActor (Float) -> Void)?
+
+    /// Блок, который AVAudioEngine вызывает НА АУДИОПОТОКЕ, а не на главном.
+    ///
+    /// Обязан быть `nonisolated`, а принимаемое замыкание — `@Sendable`.
+    /// `AVAudioNodeTapBlock` в SDK не помечен `@Sendable`, поэтому замыкание,
+    /// созданное прямо внутри `@MainActor`-метода, унаследовало бы изоляцию
+    /// главного актора. Swift 6 вставляет в такое замыкание динамическую
+    /// проверку исполнителя, и на первом же буфере с realtime-потока процесс
+    /// падает с EXC_BREAKPOINT. Ровно это и случилось на первой живой диктовке
+    /// (crash 2026-09-03, поток RealtimeMessenger.mServiceQueue).
+    ///
+    /// Тот же приём уже применён к `SampleSink.onLevel` — там `@Sendable`
+    /// стоял с самого начала, поэтому этот путь не падал.
+    nonisolated static func makeTapBlock(
+        _ receive: @escaping @Sendable (AVAudioPCMBuffer) -> Void
+    ) -> AVAudioNodeTapBlock {
+        { buffer, _ in receive(buffer) }
+    }
 
     func start() throws {
         guard !isRecording else { return }
@@ -140,9 +181,9 @@ final class AudioRecorder {
         )
         sink.open()
 
-        input.installTap(onBus: 0, bufferSize: 2048, format: inputFormat) { buffer, _ in
-            sink.append(buffer)
-        }
+        input.installTap(
+            onBus: 0, bufferSize: 2048, format: inputFormat,
+            block: Self.makeTapBlock { [sink] buffer in sink.append(buffer) })
 
         do {
             engine.prepare()
@@ -156,19 +197,38 @@ final class AudioRecorder {
         self.engine = engine
         self.sink = sink
         isRecording = true
+        AppLog.note(
+            "запись начата: вход \(Int(inputFormat.sampleRate)) Гц / "
+            + "\(inputFormat.channelCount) кан. -> \(Int(target.sampleRate)) Гц / моно")
     }
 
     /// Останавливает запись и отдаёт накопленное ровно один раз. Копилка очищается здесь,
     /// поэтому любой исход распознавания оставляет её пустой.
+    /// Итог записи: сам звук и то, что случилось по дороге.
+    /// Счётчики нужны, чтобы отказ звукового тракта не выглядел как короткая запись.
+    struct Outcome {
+        let samples: AudioSamples
+        let acceptedBuffers: Int
+        let droppedBuffers: Int
+        /// Первая причина отказа преобразования, если он был.
+        let failure: String?
+    }
+
     @discardableResult
-    func stop() -> AudioSamples {
-        guard isRecording, let engine, let sink else { return AudioSamples(values: []) }
-        let values = sink.closeAndTake()
+    func stop() -> Outcome {
+        guard isRecording, let engine, let sink else {
+            return Outcome(samples: AudioSamples(values: []), acceptedBuffers: 0, droppedBuffers: 0, failure: nil)
+        }
+        let taken = sink.closeAndTake()
         engine.inputNode.removeTap(onBus: 0)
         engine.stop()
         self.engine = nil
         self.sink = nil
         isRecording = false
-        return AudioSamples(values: values)
+        return Outcome(
+            samples: AudioSamples(values: taken.values),
+            acceptedBuffers: taken.accepted,
+            droppedBuffers: taken.dropped,
+            failure: taken.failure)
     }
 }
