@@ -109,17 +109,43 @@ final class HotkeyMonitor {
     }
 
     /// Читает только тип события, key code и modifier flags. Ничего больше от события не берётся.
+    /// В журнал попадают только события ПРАВОЙ Command: чужие клавиши не логируются.
     private func handle(typeRawValue: UInt32, keyCode: Int64, flags: UInt64) -> HotkeyDecision {
         // Система выключает tap по таймауту или по потоку ввода: включаем обратно.
         if typeRawValue == CGEventType.tapDisabledByTimeout.rawValue
             || typeRawValue == CGEventType.tapDisabledByUserInput.rawValue {
+            let reason = typeRawValue == CGEventType.tapDisabledByTimeout.rawValue
+                ? "таймаут обработчика" : "поток ввода"
+            AppLog.problem("перехват клавиатуры отключён системой (\(reason)), включаю обратно")
+
+            // Пока перехват был выключен, события до нас не доходили — в том числе
+            // отпускание клавиши. Оставить прежнее isDown значит принять следующее
+            // нажатие за удержание и проглотить его: запись не остановится.
+            machine = HotkeyMachine()
             if let tap { CGEvent.tapEnable(tap: tap, enable: true) }
             return .passThrough
         }
         guard typeRawValue == CGEventType.flagsChanged.rawValue else { return .passThrough }
 
-        let decision = machine.decide(keyCode: keyCode, flags: flags, state: currentState())
-        if decision != .passThrough { onDecision(decision) }
+        let wasDown = machine.isDown
+        let state = currentState()
+        let decision = machine.decide(keyCode: keyCode, flags: flags, state: state)
+
+        if keyCode == HotkeyMachine.rightCommandKeyCode {
+            AppLog.note(
+                "правая Command: \(machine.isDown ? "нажата" : "отпущена")"
+                + ", было \(wasDown ? "нажата" : "отпущена")"
+                + ", состояние \(state.rawValue) -> \(decision)")
+        }
+
+        if decision != .passThrough {
+            // Асинхронно, и это несущее решение. Запуск AVAudioEngine и показ окна
+            // занимают десятки миллисекунд; выполненные прямо здесь, они держат
+            // обработчик перехвата, система выключает его по таймауту, и события
+            // отпускания теряются. Обработчик обязан вернуться немедленно.
+            let action = onDecision
+            Task { @MainActor in action(decision) }
+        }
         return decision
     }
 }

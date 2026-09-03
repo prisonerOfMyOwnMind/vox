@@ -71,4 +71,32 @@ struct AppHotkeyTests {
             }
         }
     }
+
+    @Test("Потерянное отпускание залипает: следующее нажатие не останавливает запись")
+    func lostReleaseSticksUntilReset() {
+        // Так выглядела живая поломка: обработчик перехвата держали запуском
+        // AVAudioEngine, система выключила перехват по таймауту, отпускание до
+        // приложения не дошло. Машина считает клавишу удерживаемой.
+        var machine = HotkeyMachine()
+        let down = HotkeyMachine.rightCommandFlag
+        let up: UInt64 = 0
+
+        #expect(machine.decide(keyCode: HotkeyMachine.rightCommandKeyCode, flags: down, state: .ready)
+            == .swallowAndStartRecording)
+        // Отпускание потеряно — событие с flags == up сюда не пришло.
+        #expect(machine.isDown)
+
+        // Следующее нажатие выглядит как удержание и поглощается: запись не остановить.
+        #expect(machine.decide(keyCode: HotkeyMachine.rightCommandKeyCode, flags: down, state: .recording)
+            == .swallow)
+
+        // Сброс машины при обратном включении перехвата возвращает управление.
+        machine = HotkeyMachine()
+        #expect(machine.decide(keyCode: HotkeyMachine.rightCommandKeyCode, flags: down, state: .recording)
+            == .swallowAndStopRecording)
+        // Контроль: нормальный цикл с отпусканием не залипает.
+        #expect(machine.decide(keyCode: HotkeyMachine.rightCommandKeyCode, flags: up, state: .ready)
+            == .swallow)
+        #expect(!machine.isDown)
+    }
 }
