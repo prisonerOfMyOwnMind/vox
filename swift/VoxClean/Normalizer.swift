@@ -92,10 +92,20 @@ public struct Normalizer: Normalizing {
     /// Если паразит несёт точку, восклицательный или вопросительный знак —
     /// удаление потеряло бы конец предложения, а восстанавливать пунктуацию
     /// запрещено. Такой токен остаётся нетронутым.
+    /// По той же причине не удаляется паразит, несущий заглавную букву начала
+    /// фразы: следующее слово осталось бы строчным, а поднимать регистр — это
+    /// шестое преобразование в закрытом наборе (owner-решение 2026-09-03).
     private static func isDroppableFiller(_ token: String) -> Bool {
         let (lead, core, trail) = parts(token)
         guard isFillerCore(core), lead.isEmpty else { return false }
+        guard !startsUppercase(core) else { return false }
         return trail.isEmpty || trail == ","
+    }
+
+    /// Ядро токена начинается с прописной буквы.
+    private static func startsUppercase(_ core: String) -> Bool {
+        guard let first = core.first else { return false }
+        return first.isUppercase
     }
 
     // MARK: - 4. Подряд идущий дубль слова
@@ -116,6 +126,12 @@ public struct Normalizer: Normalizing {
             if let previous = result.last, isCollapsibleDuplicate(previous: previous, token) {
                 // Остаётся ВТОРОЙ токен: вся пунктуация пары висит на нём,
                 // и выбросить надо голое слово, а не конец предложения.
+                // Но если первый нёс заглавную, а второй нет, схлопывание
+                // уронило бы регистр — тогда пара остаётся как есть.
+                if startsUppercase(parts(previous).1), !startsUppercase(parts(token).1) {
+                    result.append(token)
+                    continue
+                }
                 result[result.count - 1] = token
             } else {
                 result.append(token)
