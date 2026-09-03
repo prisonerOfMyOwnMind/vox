@@ -47,6 +47,7 @@ final class AppController: NSObject, NSApplicationDelegate {
     private var permissions = PermissionsReport(
         microphone: .denied, accessibility: .denied, inputMonitoring: .denied)
     private var state: AppState = .starting
+    private var modelStatus: ModelStatus = .checking
     private var message: String?
 
     // MARK: жизненный цикл
@@ -58,6 +59,29 @@ final class AppController: NSObject, NSApplicationDelegate {
             onDecision: { [weak self] decision in self?.apply(decision) }
         )
         rebuildMenu()
+        recheckPermissions()
+        verifyModelOnLaunch()
+    }
+
+    /// Проверяет встроенную модель сразу после запуска, вне главного потока:
+    /// сверка SHA-256 читает около 483 МБ. До ответа приложение остаётся в
+    /// `starting` и диктовку не предлагает.
+    private func verifyModelOnLaunch() {
+        Task.detached(priority: .userInitiated) {
+            let status: ModelStatus
+            do {
+                try ModelIntegrity.verify(directory: ModelLocation.modelDirectory())
+                status = .ok
+            } catch {
+                status = .broken(error.localizedDescription)
+            }
+            await MainActor.run { [weak self] in self?.modelChecked(status) }
+        }
+    }
+
+    private func modelChecked(_ status: ModelStatus) {
+        modelStatus = status
+        if case .broken(let reason) = status { AppLog.problem("модель: \(reason)") }
         recheckPermissions()
     }
 
@@ -88,6 +112,36 @@ final class AppController: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// Итог проверки встроенной модели.
+    enum ModelStatus: Sendable, Equatable {
+        case checking
+        case ok
+        case broken(String)
+    }
+
+    /// Состояние приложения по разрешениям и модели.
+    ///
+    /// Повреждённая модель перекрывает всё остальное: чинить разрешения
+    /// бессмысленно, диктовка всё равно невозможна, а сообщение про
+    /// переустановку сборки — единственное действие, которое поможет.
+    /// Раньше модель проверялась лениво, при первой транскрипции: меню
+    /// говорило «готов», пользователь наговаривал полминуты и терял запись,
+    /// потому что `Recorder.stop` очищает копилку в любом исходе.
+    nonisolated static func startupState(
+        permissionsGranted: Bool,
+        permissionsSummary: String,
+        model: ModelStatus
+    ) -> (state: AppState, message: String?) {
+        switch model {
+        case .broken(let reason):
+            return (.error, reason)
+        case .checking:
+            return (.starting, "проверяю встроенную модель")
+        case .ok:
+            return permissionsGranted ? (.ready, nil) : (.needsPermissions, permissionsSummary)
+        }
+    }
+
     /// Можно ли перепроверять разрешения в этом состоянии.
     /// Чистая функция, чтобы правило проверялось тестом, а не только глазами.
     nonisolated static func recheckIsAllowed(in state: AppState) -> Bool {
@@ -104,9 +158,14 @@ final class AppController: NSObject, NSApplicationDelegate {
         guard Self.recheckIsAllowed(in: state) else { return }
 
         permissions = PermissionsCheck.current()
-        guard permissions.allGranted else {
+        let decision = Self.startupState(
+            permissionsGranted: permissions.allGranted,
+            permissionsSummary: permissions.summary,
+            model: modelStatus)
+
+        guard decision.state == .ready else {
             hotkey?.stop()
-            move(to: .needsPermissions, message: permissions.summary)
+            move(to: decision.state, message: decision.message)
             return
         }
         do {

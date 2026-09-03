@@ -86,6 +86,7 @@ allowed = [
     r"запись остановлена: ",
     r"перехват клавиатуры отключён системой ",
     r"звуковой тракт отказал: ",
+    r"модель: ",
 ]
 bad, total = [], 0
 for line in open(os.environ["JOURNAL"], encoding="utf-8", errors="replace"):
