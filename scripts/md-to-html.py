@@ -32,7 +32,10 @@ code {
 }
 pre {
   background:var(--bg-soft); border-left:2pt solid var(--rule);
-  padding:2.5mm 3mm; margin:0 0 3mm; overflow:hidden; break-inside:avoid;
+  padding:2.5mm 3mm; margin:0 0 3mm; break-inside:avoid;
+  /* Не overflow:hidden — он молча срезал длинные строки по правому краю,
+     и в готовом PDF слово обрывалось на середине. Переносим. */
+  white-space:pre-wrap; overflow-wrap:anywhere;
 }
 pre code { background:none; padding:0; font-size:8.5pt; line-height:1.45; }
 table {
