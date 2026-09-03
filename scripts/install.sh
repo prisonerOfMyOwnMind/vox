@@ -25,18 +25,29 @@ if pgrep -qf "$DEST/Contents/MacOS/Vox"; then
         pkill -f "$DEST/Contents/MacOS/Vox" || true
         sleep 1
     fi
-    pgrep -qf "$DEST/Contents/MacOS/Vox" && die "Vox не завершился, закройте его вручную"
+    # Не `pgrep ... && die ...`: под set -e успешный путь (процесса нет, pgrep
+    # вернул 1) обрушивал бы скрипт молча, с кодом 1 и без единого сообщения.
+    if pgrep -qf "$DEST/Contents/MacOS/Vox"; then
+        die "Vox не завершился, закройте его вручную"
+    fi
 fi
 
 rm -rf "$DEST"
 cp -R "$SRC" "$DEST" || die "не удалось скопировать в $DEST"
 codesign --verify --strict "$DEST" || die "подпись установленного приложения не проходит проверку"
 
-SIG=$(codesign -dv --verbose=2 "$DEST" 2>&1 | grep -E '^Signature=' | cut -d= -f2)
-printf 'установлено: %s (подпись: %s)\n' "$DEST" "$SIG"
-if [ "$SIG" = "adhoc" ]; then
-    printf 'ВНИМАНИЕ: подпись ad-hoc. Выданные разрешения слетят при следующей пересборке.\n'
+# Три исхода различаются явно. `grep`, не нашедший строку, возвращает 1, и под
+# `set -euo pipefail` присваивание вида SIG=$(... | grep ...) обрушивает скрипт
+# молча — ровно это и произошло, когда подпись перестала быть ad-hoc и строка
+# `Signature=` исчезла из вывода codesign.
+INFO="$(codesign -dv --verbose=2 "$DEST" 2>&1)" || die "codesign не смог прочитать подпись $DEST"
+if printf '%s' "$INFO" | grep -q '^Signature=adhoc'; then
+    printf 'установлено: %s (подпись: ad-hoc)\n' "$DEST"
+    printf 'ВНИМАНИЕ: отпечаток ad-hoc меняется на каждой сборке — выданные разрешения слетят.\n'
     printf '  Постоянная подпись: bash scripts/dev-identity.sh, затем пересоберите и поставьте заново.\n'
+else
+    AUTHORITY="$(printf '%s' "$INFO" | sed -n 's/^Authority=//p' | head -1)"
+    printf 'установлено: %s (подпись: %s, постоянная)\n' "$DEST" "${AUTHORITY:-неизвестна}"
 fi
 
 open "$DEST" || die "LaunchServices не смог запустить $DEST"
