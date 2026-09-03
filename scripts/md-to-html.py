@@ -109,7 +109,11 @@ def convert(md: str) -> str:
             items = []
             while i < len(lines) and (re.match(r"^[-*] ", lines[i]) or re.match(r"^\d+\. ", lines[i]) or
                                       (lines[i].startswith("  ") and lines[i].strip() and items)):
-                if lines[i].startswith("  ") and not re.match(r"^\s*[-*\d]", lines[i]):
+                # Проверять надо МАРКЕР пункта, а не первый символ: продолжение,
+                # начинающееся с цифры («0.196 -> 0.176 даёт…»), иначе становится
+                # новым пунктом и разрывает список пополам. Видно только на
+                # отрисованной странице.
+                if lines[i].startswith("  ") and not re.match(r"^\s*(?:[-*] |\d+\. )", lines[i]):
                     items[-1] += " " + lines[i].strip()
                 else:
                     items.append(re.sub(r"^(?:[-*]|\d+\.) ", "", lines[i]))
