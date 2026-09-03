@@ -206,7 +206,10 @@ final class AppController: NSObject, NSApplicationDelegate {
             for kind in permissions.missing {
                 menu.addItem(disabled(permissions.line(for: kind)))
                 let request = NSMenuItem(
-                    title: "Запросить: \(kind.title)", action: #selector(menuRequest(_:)), keyEquivalent: "")
+                    title: kind.grantableInApp
+                        ? "Запросить: \(kind.title)"
+                        : "Открыть настройки: \(kind.title)",
+                    action: #selector(menuRequest(_:)), keyEquivalent: "")
                 request.target = self
                 request.representedObject = kind.rawValue
                 menu.addItem(request)

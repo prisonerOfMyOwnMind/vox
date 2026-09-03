@@ -7,7 +7,17 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PINS="$ROOT/swift/VoxCore/Pins.swift"
 BUILD_DIR="$ROOT/.build"
 APP="$BUILD_DIR/Vox.app"
-SIGN_IDENTITY="${VOX_SIGN_IDENTITY:--}"
+# Постоянная подпись, если она заведена scripts/dev-identity.sh.
+# Ad-hoc остаётся запасным вариантом, но с ним отпечаток меняется на каждой
+# сборке, и выданные разрешения macOS слетают.
+DEV_IDENTITY_NAME="${VOX_IDENTITY_NAME:-Vox Dev}"
+if [ -n "${VOX_SIGN_IDENTITY:-}" ]; then
+    SIGN_IDENTITY="$VOX_SIGN_IDENTITY"
+elif security find-identity -v -p codesigning 2>/dev/null | grep -qF "$DEV_IDENTITY_NAME"; then
+    SIGN_IDENTITY="$DEV_IDENTITY_NAME"
+else
+    SIGN_IDENTITY="-"
+fi
 MANIFEST_NAME="vox-model-manifest.json"
 
 die() { printf 'ОСТАНОВ: %s\n' "$1" >&2; exit 1; }
@@ -90,7 +100,12 @@ cp -R "$MODEL_SRC" "$MODEL_DEST"
 # Повторная проверка уже скопированного: копирование тоже может испортить файлы.
 verify_model "$MODEL_DEST" "копия в bundle"
 
-printf 'подпись (%s)\n' "$SIGN_IDENTITY"
+if [ "$SIGN_IDENTITY" = "-" ]; then
+    printf 'подпись (ad-hoc): отпечаток меняется на каждой сборке, разрешения macOS будут слетать.\n'
+    printf '  Постоянная подпись: bash scripts/dev-identity.sh\n'
+else
+    printf 'подпись (%s): постоянная, разрешения переживут пересборку\n' "$SIGN_IDENTITY"
+fi
 codesign --force --sign "$SIGN_IDENTITY" --identifier local.vox.Vox --timestamp=none "$APP"
 codesign --verify --strict --deep --verbose=2 "$APP"
 

@@ -34,6 +34,26 @@ public enum PermissionKind: String, Sendable, CaseIterable {
     public var settingsPath: String {
         "Системные настройки → Конфиденциальность и безопасность → \(title) → включить Vox"
     }
+
+    /// Панель Системных настроек, открывающая нужный список.
+    public var settingsURL: URL? {
+        let anchor: String
+        switch self {
+        case .microphone: anchor = "Privacy_Microphone"
+        case .accessibility: anchor = "Privacy_Accessibility"
+        case .inputMonitoring: anchor = "Privacy_ListenEvent"
+        }
+        return URL(string: "x-apple.systempreferences:com.apple.preference.security?\(anchor)")
+    }
+
+    /// Можно ли выдать разрешение прямо из приложения.
+    ///
+    /// Только микрофон: он выдаётся модальным окном. «Универсальный доступ» и
+    /// «Мониторинг ввода» macOS выдать из процесса не даёт вообще — их включает
+    /// человек переключателем в Системных настройках. Системный API показывает
+    /// лишь разовое окно со ссылкой, причём ОДИН раз за жизнь идентичности
+    /// приложения; израсходовано — и вызов молча возвращает отказ.
+    public var grantableInApp: Bool { self == .microphone }
 }
 
 public enum PermissionState: String, Sendable, Equatable {
@@ -108,7 +128,20 @@ public enum PermissionsCheck {
         }
     }
 
-    /// Просит систему показать свой запрос. Ссылки не открываются: диалог рисует macOS.
+    /// Открывает нужный список в Системных настройках.
+    ///
+    /// Единственное место, где приложение открывает ссылку, и делает это ТОЛЬКО
+    /// по явному нажатию пользователя в меню. Схема локальная, `x-apple.systempreferences`,
+    /// сети не касается. Без этого пункт «Выдать» выглядел бы неработающим:
+    /// системный API для двух из трёх разрешений ничего не показывает.
+    @MainActor
+    private static func openSettings(for kind: PermissionKind) {
+        guard let url = kind.settingsURL else { return }
+        NSWorkspace.shared.open(url)
+    }
+
+    /// Просит систему показать свой запрос и, если разрешение так и не выдано,
+    /// открывает нужный список в Системных настройках.
     /// `completion` вызывается на главном потоке после того, как система ответила.
     @MainActor
     public static func request(_ kind: PermissionKind, completion: @escaping @MainActor () -> Void) {
@@ -121,10 +154,12 @@ public enum PermissionsCheck {
             // Значение kAXTrustedCheckOptionPrompt. Константа объявлена как var и не проходит
             // проверку строгой конкуррентности Swift 6.
             let key = "AXTrustedCheckOptionPrompt"
-            _ = AXIsProcessTrustedWithOptions([key: true] as CFDictionary)
+            let trusted = AXIsProcessTrustedWithOptions([key: true] as CFDictionary)
+            if !trusted { openSettings(for: kind) }
             completion()
         case .inputMonitoring:
-            _ = CGRequestListenEventAccess()
+            let granted = CGRequestListenEventAccess()
+            if !granted { openSettings(for: kind) }
             completion()
         }
     }
