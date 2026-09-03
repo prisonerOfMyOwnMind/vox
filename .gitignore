@@ -17,6 +17,9 @@ Models/
 *.mlmodel
 parakeet_vocab.json
 
+# отчёты regression пишутся рядом с манифестом
+fixtures/regression-*.json
+
 # локальные настройки и секреты
 .env
 .env.*

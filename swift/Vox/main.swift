@@ -6,18 +6,15 @@ import VoxApp
 
 // Порядок фиксирован контрактом: запрет исходящей сети применяется до всего
 // остального, включая app delegate, загрузку модели и любое обращение к FluidAudio.
-let lockdown: LockdownStatus
 do {
-    lockdown = try Bootstrap.activateNetworkLockdown()
+    let lockdown = try Bootstrap.activateNetworkLockdown()
+    if case .applied(let mechanism) = lockdown {
+        FileHandle.standardError.write(Data("запрет исходящей сети: \(mechanism)\n".utf8))
+    }
 } catch {
     FileHandle.standardError.write(Data("ОСТАНОВ: \(error.localizedDescription)\n".utf8))
     exit(2)
 }
-if case .notImplemented = lockdown {
-    FileHandle.standardError.write(
-        Data("ВНИМАНИЕ: запрет исходящей сети не реализован (bootstrap-заглушка)\n".utf8))
-}
-
 let arguments = Array(CommandLine.arguments.dropFirst())
 
 func usage() -> Never {
@@ -34,11 +31,6 @@ func usage() -> Never {
 
 switch arguments.first {
 case nil:
-    guard case .applied = lockdown else {
-        FileHandle.standardError.write(
-            Data("ОСТАНОВ: menu bar не запускается без применённого запрета сети\n".utf8))
-        exit(2)
-    }
     do {
         try MenuBarApp.run()
     } catch {

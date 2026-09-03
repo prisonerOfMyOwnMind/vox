@@ -58,6 +58,9 @@ public struct RegressionReport: Codable, Sendable, Equatable {
     public let fluidAudioCommit: String
     public let modelRepo: String
     public let modelRevision: String
+    /// Версия словаря технических терминов, которым считался normalized.
+    /// Без неё два отчёта с разными словарями неразличимы.
+    public let dictionaryVersion: String
     public let meanWER: Double
     public let meanWERRaw: Double
     public let records: [RegressionRecord]
@@ -65,7 +68,8 @@ public struct RegressionReport: Codable, Sendable, Equatable {
     public init(
         startedAt: String, totalRuntimeSeconds: Double, appVersion: String,
         fluidAudioCommit: String, modelRepo: String, modelRevision: String,
-        meanWER: Double, meanWERRaw: Double, records: [RegressionRecord]
+        dictionaryVersion: String, meanWER: Double, meanWERRaw: Double,
+        records: [RegressionRecord]
     ) {
         self.startedAt = startedAt
         self.totalRuntimeSeconds = totalRuntimeSeconds
@@ -73,6 +77,7 @@ public struct RegressionReport: Codable, Sendable, Equatable {
         self.fluidAudioCommit = fluidAudioCommit
         self.modelRepo = modelRepo
         self.modelRevision = modelRevision
+        self.dictionaryVersion = dictionaryVersion
         self.meanWER = meanWER
         self.meanWERRaw = meanWERRaw
         self.records = records

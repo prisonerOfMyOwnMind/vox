@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 @testable import VoxCore
+@testable import VoxSTT
 
 @Suite("Контракты VoxCore")
 struct CoreContractsTests {
@@ -36,5 +37,12 @@ struct CoreContractsTests {
         )
         let data = try JSONEncoder().encode(manifest)
         #expect(try JSONDecoder().decode(ModelManifest.self, from: data) == manifest)
+    }
+
+    @Test("Путь модели в сборке и в runtime — один и тот же")
+    func modelPathAgreesBetweenBuildAndRuntime() {
+        // scripts/build-app.sh кладёт модель по Pins, VoxSTT ищет её по ModelLocation.
+        // Разойдутся — собранный .app не найдёт модель, а тесты этого не заметят.
+        #expect(Pins.modelBundleSubpath == ModelLocation.bundleSubpath)
     }
 }

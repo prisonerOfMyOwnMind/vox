@@ -71,6 +71,7 @@ public enum CleanEntry {
             fluidAudioCommit: Pins.fluidAudioCommit,
             modelRepo: Pins.modelRepo,
             modelRevision: Pins.modelRevision,
+            dictionaryVersion: Normalizer.dictionaryVersion,
             meanWER: mean(records.map(\.wer)),
             meanWERRaw: mean(records.map(\.werRaw)),
             records: records

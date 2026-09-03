@@ -5,12 +5,6 @@ import VoxCore
 public enum LockdownStatus: Sendable, Equatable {
     /// Запрет применён указанным механизмом.
     case applied(String)
-
-    /// НЕДОСТИЖИМО. `activateNetworkLockdown()` этот случай не возвращает:
-    /// профиль либо применён, либо брошена `VoxError.networkLockdownFailed`.
-    /// Случай оставлен только потому, что на него ссылается замороженный
-    /// `swift/Vox/main.swift`; удалять его должен главный агент вместе с той ссылкой.
-    case notImplemented
 }
 
 public enum Bootstrap {
