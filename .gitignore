@@ -1,0 +1,24 @@
+# сборка
+.build/
+.swiftpm/
+*.xcodeproj/
+DerivedData/
+
+# артефакты сборки приложения
+build/
+dist/
+*.app/
+
+# модель: качается контролируемой сборкой, в репозиторий не попадает
+models/
+Models/
+*.mlmodelc/
+*.mlpackage/
+*.mlmodel
+parakeet_vocab.json
+
+# локальные настройки и секреты
+.env
+.env.*
+*.local
+.DS_Store
