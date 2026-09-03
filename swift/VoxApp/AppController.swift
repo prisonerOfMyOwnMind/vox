@@ -88,7 +88,21 @@ final class AppController: NSObject, NSApplicationDelegate {
         }
     }
 
+    /// Можно ли перепроверять разрешения в этом состоянии.
+    /// Чистая функция, чтобы правило проверялось тестом, а не только глазами.
+    nonisolated static func recheckIsAllowed(in state: AppState) -> Bool {
+        state != .recording && state != .transcribing
+    }
+
     private func recheckPermissions() {
+        // Во время записи и распознавания состояние трогать нельзя. Раньше пункт
+        // меню «Проверить разрешения» безусловно переводил в .ready: инварианты
+        // «во время recording новая запись не запускается» и «во время
+        // transcribing хоткей игнорируется» снимались одним кликом, а state
+        // расходился с recorder.isRecording. В живом прогоне владельца это
+        // наблюдалось: состояние стало ready за 1.1 с до конца распознавания.
+        guard Self.recheckIsAllowed(in: state) else { return }
+
         permissions = PermissionsCheck.current()
         guard permissions.allGranted else {
             hotkey?.stop()
@@ -201,6 +215,9 @@ final class AppController: NSObject, NSApplicationDelegate {
         let recheck = NSMenuItem(
             title: "Проверить разрешения", action: #selector(menuRecheck), keyEquivalent: "")
         recheck.target = self
+        // Во время записи и распознавания пункт неактивен: нажимать его в этот
+        // момент нечего, а раньше он ломал состояние.
+        recheck.isEnabled = Self.recheckIsAllowed(in: state)
         menu.addItem(recheck)
 
         if !permissions.allGranted {

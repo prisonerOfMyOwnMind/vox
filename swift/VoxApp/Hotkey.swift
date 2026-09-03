@@ -135,16 +135,15 @@ final class HotkeyMonitor {
         }
         guard typeRawValue == CGEventType.flagsChanged.rawValue else { return .passThrough }
 
-        let wasDown = machine.isDown
         let state = currentState()
         let decision = machine.decide(keyCode: keyCode, flags: flags, state: state)
 
-        if keyCode == HotkeyMachine.rightCommandKeyCode {
-            AppLog.note(
-                "правая Command: \(machine.isDown ? "нажата" : "отпущена")"
-                    + ", было \(wasDown ? "нажата" : "отпущена")"
-                    + ", состояние \(state.rawValue) -> \(decision)")
-        }
+        // Нажатия НЕ журналируются. Диагностика, добавленная при разборе
+        // «не могу закончить запись», писала каждое событие правой Command в
+        // постоянный системный журнал: получался помеченный временем след того,
+        // когда владелец диктовал. Это прямо запрещено контрактом приватности,
+        // и README обещает обратное. Отключение перехвата системой ниже
+        // журналируется — там нет ни клавиш, ни момента их нажатия.
 
         if decision != .passThrough {
             // Асинхронно, и это несущее решение. Запуск AVAudioEngine и показ окна

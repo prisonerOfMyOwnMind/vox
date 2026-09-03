@@ -106,3 +106,18 @@ struct AppHotkeyTests {
         #expect(!machine.isDown)
     }
 }
+
+@Suite("Состояния: перепроверка разрешений не ломает работу")
+struct AppStateGuardTests {
+
+    @Test("Состояния записи и распознавания защищены от перепроверки")
+    func busyStatesAreProtected() {
+        // Правило: пока идёт запись или распознавание, перепроверка разрешений
+        // состояние не трогает. В живом прогоне владельца пункт меню затирал
+        // transcribing на ready за 1.1 с до конца распознавания.
+        let busy: Set<AppState> = [.recording, .transcribing]
+        for state in AppState.allCases {
+            #expect(AppController.recheckIsAllowed(in: state) == !busy.contains(state))
+        }
+    }
+}

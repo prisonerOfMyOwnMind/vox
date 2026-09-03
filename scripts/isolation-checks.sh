@@ -61,38 +61,52 @@ else
     bad "повреждение не обнаружено либо каталог изменён ($BEFORE -> $AFTER)"
 fi
 
-hdr "4. Расшифровка не попадает в журнал"
-FIX="$ROOT/fixtures/audio/dev-02.wav"
-if [ -f "$FIX" ]; then
-    RAW="$("$BIN" --transcribe-file "$FIX" 2>/dev/null | sed -n 's/^raw: *//p')"
-    printf 'распознано: %s\n' "$RAW"
-    # Ищем КАЖДОЕ слово длиннее пяти букв, а не одно случайное. Разбор на
-    # python3: `tr` с классом [:alnum:] в системной локали не понимает кириллицу
-    # и рвёт UTF-8 по байтам — из пяти русских слов уцелевало одно английское,
-    # и проверка выглядела сильной, будучи почти пустой.
-    JOURNAL_FILE="$WORK/journal.txt"
-    /usr/bin/log show --predicate 'subsystem == "local.vox.Vox"' --last 5m > "$JOURNAL_FILE" 2>/dev/null || true
-    RESULT="$(RAW_TEXT="$RAW" JOURNAL="$JOURNAL_FILE" python3 - <<'PYEOF'
+hdr "4. В журнале только разрешённые виды записей"
+# Прошлая версия искала слова расшифровки в журнале после --transcribe-file. Этот
+# путь в журнал не пишет НИЧЕГО (AppLog живёт в VoxApp и оттуда не вызывается),
+# поэтому проверка сравнивала расшифровку с пустым журналом и провалиться не могла.
+# Теперь проверяется белый список: любая строка, не подходящая ни под один
+# разрешённый вид, — провал. Так ловится и добавление расшифровки, и возврат
+# журналирования нажатий.
+open "$APP" 2>/dev/null || true
+sleep 3
+MYPID="$(pgrep -f "^$APP/Contents/MacOS/Vox$" | head -1)"
+"$BIN" --transcribe-file "$ROOT/fixtures/audio/dev-02.wav" >/dev/null 2>&1 || true
+sleep 2
+JOURNAL="$WORK/journal.txt"
+/usr/bin/log show --predicate 'subsystem == "local.vox.Vox"' --last 2m > "$JOURNAL" 2>/dev/null || true
+[ -n "${MYPID:-}" ] && kill "$MYPID" 2>/dev/null || true
+
+RESULT="$(JOURNAL="$JOURNAL" python3 - <<'PYEOF'
 import os, re, sys
-raw = os.environ["RAW_TEXT"]
-journal = open(os.environ["JOURNAL"], encoding="utf-8", errors="replace").read()
-words = sorted({w for w in re.findall(r"\w+", raw, flags=re.UNICODE) if len(w) >= 6})
-leaked = [w for w in words if w in journal]
-print(len(words), ",".join(leaked))
+allowed = [
+    r"запрет исходящей сети: ",
+    r"состояние: ",
+    r"запись начата: ",
+    r"запись остановлена: ",
+    r"перехват клавиатуры отключён системой ",
+    r"звуковой тракт отказал: ",
+]
+bad, total = [], 0
+for line in open(os.environ["JOURNAL"], encoding="utf-8", errors="replace"):
+    if "[local.vox.Vox:vox]" not in line:
+        continue
+    body = line.split("[local.vox.Vox:vox]", 1)[1].strip()
+    total += 1
+    if not any(re.match(a, body) for a in allowed):
+        bad.append(body[:70])
+print(total, "|", " ; ".join(bad[:3]))
 PYEOF
 )"
-    COUNT="${RESULT%% *}"
-    LEAKED="${RESULT#* }"
-    printf 'слов-канареек: %s\n' "$COUNT"
-    if [ "$COUNT" = "0" ]; then
-        bad "не удалось выделить ни одного слова — проверка бессодержательна"
-    elif [ -z "$LEAKED" ]; then
-        ok "ни одно из $COUNT слов расшифровки в журнале не встречается"
-    else
-        bad "в журнале найдены слова расшифровки: $LEAKED"
-    fi
+TOTAL="${RESULT%% |*}"
+BAD="${RESULT#*| }"
+printf 'строк приложения в журнале: %s\n' "$TOTAL"
+if [ "$TOTAL" = "0" ]; then
+    bad "журнал пуст — проверка бессодержательна, приложение не запускалось"
+elif [ -n "$BAD" ]; then
+    bad "в журнале строки вне белого списка: $BAD"
 else
-    bad "нет fixture для проверки"
+    ok "все $TOTAL строк journal подходят под разрешённые виды; ни расшифровок, ни нажатий"
 fi
 
 hdr "5. После выхода процесс не остаётся"
@@ -116,7 +130,15 @@ FOUND=""
 for d in "$HOME/Library/LaunchAgents" /Library/LaunchAgents /Library/LaunchDaemons; do
     [ -d "$d" ] && FOUND="$FOUND$(grep -rl -i 'vox' "$d" 2>/dev/null || true)"
 done
-ITEMS="$(osascript -e 'tell application "System Events" to get the name of every login item' 2>/dev/null | grep -ci vox || true)"
+# Три исхода различаются: отказ osascript (нет доступа к System Events) не должен
+# выглядеть как «login item нет».
+ITEMS_RAW="$(osascript -e 'tell application "System Events" to get the name of every login item' 2>&1)"
+ITEMS_CODE=$?
+if [ $ITEMS_CODE -ne 0 ]; then
+    ITEMS="проверка не состоялась: $(printf '%s' "$ITEMS_RAW" | head -1)"
+else
+    ITEMS="$(printf '%s' "$ITEMS_RAW" | grep -ci vox || true)"
+fi
 printf 'LaunchAgent/Daemon с упоминанием Vox: %s\n' "${FOUND:-нет}"
 printf 'login items с Vox: %s\n' "$ITEMS"
 if [ -z "$FOUND" ] && [ "$ITEMS" = "0" ]; then
