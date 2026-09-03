@@ -13,9 +13,8 @@ public enum ModelLocation {
     public static let folderName = Repo.parakeetV3.folderName
 
     /// Каталог модели внутри bundle относительно `Contents/Resources`.
-    /// Отличается от `Pins.modelBundleSubpath` (`Models/parakeet-tdt-0.6b-v3-coreml`):
-    /// по пути из `Pins` FluidAudio модель не находит. `Pins` заморожен, расхождение
-    /// вынесено в отчёт.
+    /// Должен совпадать с `Pins.modelBundleSubpath`: по нему build-app.sh
+    /// раскладывает модель в bundle. Равенство стережёт CoreContractsTests.
     public static var bundleSubpath: String { "Models/\(folderName)" }
 
     public static func modelDirectory() -> URL {

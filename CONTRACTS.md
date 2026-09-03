@@ -53,8 +53,9 @@ hotkey, запись, индикатор, буфер обмена, запрет 
 2. разбор аргументов;
 3. app delegate, загрузка модели, любое обращение к FluidAudio.
 
-Пока `activateNetworkLockdown` возвращает `.notImplemented`, menu bar не
-запускается. Ветка `deliver` обязана убрать этот случай из `LockdownStatus`.
+`activateNetworkLockdown` либо возвращает `.applied` с названием механизма, либо
+бросает `VoxError.networkLockdownFailed` и процесс завершается. Механизм печатается
+в stderr при старте — это доказательство изоляции, а не отладочный вывод.
 
 ## Аудио
 
@@ -77,6 +78,8 @@ hotkey, запись, индикатор, буфер обмена, запрет 
   `JointDecisionv3.mlmodelc` и `parakeet_vocab.json` — около 483 МБ из 3.59 ГБ
   репозитория модели. Остальные файлы в bundle не идут;
 - `AsrModels.repoPath` берёт родителя переданного каталога и приписывает
-  `parakeet-tdt-0.6b-v3-coreml`, поэтому раскладка в bundle не произвольная.
-  Ветка `stt` проверяет это эмпирически и правит `Pins.modelBundleSubpath`,
-  если разведка разойдётся с фактом.
+  `Repo.folderName`, а тот ОТБРАСЫВАЕТ суффикс `-coreml`. Каталог модели поэтому
+  называется `parakeet-tdt-0.6b-v3`, а не как репозиторий. Проверено эмпирически
+  веткой `stt`; ошибочная догадка обратного стоила проекту несобираемого `.app`.
+  Значение живёт в `Pins.modelBundleSubpath` и `ModelLocation.bundleSubpath`,
+  их равенство стережёт `CoreContractsTests`.

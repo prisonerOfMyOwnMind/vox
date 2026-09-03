@@ -25,7 +25,7 @@ MODEL_SUBPATH="$(pin modelBundleSubpath)"
 MODEL_REPO="$(pin modelRepo)"
 MODEL_REVISION="$(pin modelRevision)"
 MODEL_NAME="$(basename "$MODEL_SUBPATH")"
-MODEL_SRC="${VOX_MODEL_DIR:-$BUILD_DIR/model/$MODEL_NAME}"
+MODEL_SRC="${VOX_MODEL_DIR:-$ROOT/models/$MODEL_NAME}"
 
 # Проверяет каталог модели по его manifest: состав, размеры и SHA-256.
 verify_model() {
@@ -67,7 +67,7 @@ if [ ! -d "$MODEL_SRC" ]; then
     FETCH="$ROOT/scripts/fetch-model.sh"
     [ -x "$FETCH" ] || die "модели нет в $MODEL_SRC, а $FETCH отсутствует или не исполняемый. Скрипт получения модели делает ветка stt; после слияния запустите его или задайте VOX_MODEL_DIR."
     printf 'модели нет, вызываю %s\n' "$FETCH"
-    "$FETCH" "$MODEL_SRC"
+    "$FETCH"
 fi
 verify_model "$MODEL_SRC" "источник"
 

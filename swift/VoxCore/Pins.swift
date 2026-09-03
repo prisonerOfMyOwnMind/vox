@@ -1,7 +1,10 @@
 import Foundation
 
-/// Единственный источник правды по закреплённым внешним ревизиям.
-/// Значения дублируются в Package.swift и в scripts/; расхождение ловит self-test.
+/// Источник правды по закреплённым внешним ревизиям для кода и отчётов.
+/// Те же значения продублированы в Package.swift и в scripts/fetch-model.sh.
+/// Автоматической сверки с ними НЕТ: modelRepo и modelRevision косвенно стережёт
+/// build-app.sh через manifest, modelBundleSubpath — CoreContractsTests,
+/// а fluidAudioCommit не стережёт ничто — при подъёме зависимости правьте вручную.
 public enum Pins {
     /// Тег и commit зависимости FluidAudio.
     public static let fluidAudioTag = "v0.15.6"
