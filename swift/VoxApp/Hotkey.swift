@@ -103,7 +103,11 @@ final class HotkeyMonitor {
 
     func stop() {
         if let source { CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes) }
-        if let tap { CGEvent.tapEnable(tap: tap, enable: false) }
+        if let tap {
+            CGEvent.tapEnable(tap: tap, enable: false)
+            // Без этого порт остаётся живым на каждом цикле stop()/start().
+            CFMachPortInvalidate(tap)
+        }
         source = nil
         tap = nil
     }

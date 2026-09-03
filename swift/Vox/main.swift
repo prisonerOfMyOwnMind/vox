@@ -7,10 +7,8 @@ import VoxApp
 // Порядок фиксирован контрактом: запрет исходящей сети применяется до всего
 // остального, включая app delegate, загрузку модели и любое обращение к FluidAudio.
 do {
-    let lockdown = try Bootstrap.activateNetworkLockdown()
-    if case .applied(let mechanism) = lockdown {
-        FileHandle.standardError.write(Data("запрет исходящей сети: \(mechanism)\n".utf8))
-    }
+    let mechanism = try Bootstrap.activateNetworkLockdown()
+    FileHandle.standardError.write(Data("запрет исходящей сети: \(mechanism)\n".utf8))
 } catch {
     FileHandle.standardError.write(Data("ОСТАНОВ: \(error.localizedDescription)\n".utf8))
     exit(2)

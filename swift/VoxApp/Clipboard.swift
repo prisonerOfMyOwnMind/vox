@@ -62,7 +62,14 @@ public enum Paste {
         }
         let stamp = pasteboard.changeCount
 
-        try sendCommandV()
+        do {
+            try sendCommandV()
+        } catch {
+            // Соседняя ветка отказа снимок восстанавливает, эта — нет: буфер
+            // пользователя остался бы затёртым расшифровкой.
+            snapshot.restore(into: pasteboard)
+            throw error
+        }
 
         try? await Task.sleep(for: verifyDelay)
 

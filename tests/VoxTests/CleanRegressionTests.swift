@@ -252,6 +252,11 @@ struct CleanWaveFileTests {
     func durationMatchesSampleCount() throws {
         let audio = Layout.fixturesDirectory.appendingPathComponent("audio/dev-01.wav")
         let samples = try WaveFile.read(at: audio)
-        #expect(samples.durationSeconds == Double(samples.values.count) / 16_000)
+        // Раньше здесь стояло `durationSeconds == count / 16_000` — это дословно
+        // тело самого свойства, тождество, зелёное при любом входе, включая
+        // пустой. Прочитанный файл в утверждении не участвовал вовсе.
+        // Теперь сверяем с фактической длительностью записи.
+        #expect(samples.values.count == 44_712)
+        #expect(abs(samples.durationSeconds - 2.7945) < 0.001)
     }
 }

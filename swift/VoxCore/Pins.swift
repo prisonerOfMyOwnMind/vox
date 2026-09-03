@@ -6,8 +6,7 @@ import Foundation
 /// build-app.sh через manifest, modelBundleSubpath — CoreContractsTests,
 /// а fluidAudioCommit не стережёт ничто — при подъёме зависимости правьте вручную.
 public enum Pins {
-    /// Тег и commit зависимости FluidAudio.
-    public static let fluidAudioTag = "v0.15.6"
+    /// Commit зависимости FluidAudio.
     public static let fluidAudioCommit = "4dbf4f9f9a5ff3a53ade848d7ba4e3df13db859b"
 
     /// Репозиторий модели на HuggingFace и его точная ревизия.

@@ -22,8 +22,11 @@ struct AppSelfTestCasesTests {
     func namesAreUniqueAndComplete() {
         let names = AppSelfTest.cases().map(\.name)
         #expect(Set(names).count == names.count)
-        #expect(names.count == AppSelfTest.lockdownCases().count + AppSelfTest.pureCases().count)
+        // Убрана сверка `names.count == lockdownCases + pureCases`: cases() —
+        // конкатенация ровно этих двух списков, равенство выполняется по
+        // построению и упасть не может.
         #expect(!AppSelfTest.lockdownCases().isEmpty)
+        #expect(!AppSelfTest.pureCases().isEmpty)
     }
 
     @Test("Профиль seatbelt запрещает исходящие соединения")

@@ -17,18 +17,6 @@ public struct AudioSamples: Sendable {
     }
 }
 
-/// Результат полного прохода: сырая расшифровка и её детерминированная обработка.
-/// raw хранится отдельно, чтобы regression мог сравнить две версии.
-public struct Transcript: Sendable, Equatable {
-    public let raw: String
-    public let normalized: String
-
-    public init(raw: String, normalized: String) {
-        self.raw = raw
-        self.normalized = normalized
-    }
-}
-
 /// Реализует VoxSTT. Одна операция за раз обеспечивается тем, что реализация — actor.
 public protocol Transcribing: Sendable {
     func transcribe(_ samples: AudioSamples) async throws -> String
@@ -41,11 +29,9 @@ public protocol Normalizing: Sendable {
 }
 
 public enum VoxError: Error, LocalizedError, Sendable {
-    case notImplemented(String)
     case recordingTooShort(seconds: Double, minimum: Double)
     case modelMissing(String)
     case modelCorrupted(String)
-    case transcriptionBusy
     case transcriptionFailed(String)
     case permissionDenied(String)
     case pasteFailed(String)
@@ -53,16 +39,12 @@ public enum VoxError: Error, LocalizedError, Sendable {
 
     public var errorDescription: String? {
         switch self {
-        case .notImplemented(let what):
-            return "Не реализовано: \(what)"
         case .recordingTooShort(let seconds, let minimum):
             return String(format: "Запись слишком короткая: %.2f с при минимуме %.2f с", seconds, minimum)
         case .modelMissing(let detail):
             return "Модель отсутствует: \(detail). Переустановите проверенную сборку."
         case .modelCorrupted(let detail):
             return "Модель изменена или повреждена: \(detail). Переустановите проверенную сборку."
-        case .transcriptionBusy:
-            return "Распознавание уже идёт"
         case .transcriptionFailed(let detail):
             return "Распознавание не удалось: \(detail)"
         case .permissionDenied(let what):

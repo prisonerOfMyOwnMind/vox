@@ -1,12 +1,6 @@
 import Foundation
 import VoxCore
 
-/// Итог применения запрета исходящей сети.
-public enum LockdownStatus: Sendable, Equatable {
-    /// Запрет применён указанным механизмом.
-    case applied(String)
-}
-
 public enum Bootstrap {
     /// Профиль seatbelt. `(allow default)` оставляет процессу всё остальное:
     /// mach-порты WindowServer, TCC, CoreAudio и чтение bundle не относятся
@@ -35,7 +29,8 @@ public enum Bootstrap {
     /// к FluidAudio и до загрузки модели.
     /// `sandbox_init` объявлен устаревшим и не экспортируется в модуль Darwin,
     /// поэтому символ берётся через `dlsym`.
-    public static func activateNetworkLockdown() throws -> LockdownStatus {
+    /// Возвращает название применённого механизма.
+    public static func activateNetworkLockdown() throws -> String {
         guard let symbol = dlsym(anyLoadedImage(), "sandbox_init") else {
             throw VoxError.networkLockdownFailed("в процессе нет символа sandbox_init")
         }
@@ -50,7 +45,7 @@ public enum Bootstrap {
         guard code == 0 else {
             throw VoxError.networkLockdownFailed(message ?? "sandbox_init вернул \(code)")
         }
-        return .applied(mechanism)
+        return mechanism
     }
 
     /// Пробное исходящее соединение. Возвращает `errno`, если соединение отклонено,

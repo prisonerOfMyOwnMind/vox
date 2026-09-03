@@ -54,8 +54,11 @@ verify_model() {
     [ "$repo" = "$MODEL_REPO" ] || die "$label: manifest про репозиторий $repo, а закреплён $MODEL_REPO"
     [ "$revision" = "$MODEL_REVISION" ] || die "$label: manifest про ревизию $revision, а закреплена $MODEL_REVISION"
 
+    local listed
+    listed="$(mktemp -t vox-listed)"
     index=0
     while path="$(/usr/libexec/PlistBuddy -c "Print :entries:$index:path" "$plist" 2>/dev/null)"; do
+        printf '%s\n' "$path" >> "$listed"
         size="$(/usr/libexec/PlistBuddy -c "Print :entries:$index:sizeBytes" "$plist")"
         sha="$(/usr/libexec/PlistBuddy -c "Print :entries:$index:sha256" "$plist")"
         [ -f "$dir/$path" ] || die "$label: файла модели нет: $path"
@@ -67,7 +70,21 @@ verify_model() {
     done
     rm -f "$plist"
     [ "$index" -gt 0 ] || die "$label: manifest не перечисляет ни одного файла"
-    printf 'модель проверена (%s): %d файлов\n' "$label" "$index"
+
+    # Обратный обход: без него сборочная проверка слабее runtime-проверки, и
+    # посторонний файл (тот же .DS_Store после открытия каталога в Finder)
+    # уезжал бы в подписанный bundle, который приложение потом откажется
+    # грузить. Совет «переустановите сборку» при этом не помогает.
+    local special extra
+    special="$(find "$dir" ! -type f ! -type d -print -quit 2>/dev/null || true)"
+    [ -z "$special" ] || { rm -f "$listed"; die "$label: не обычный файл в каталоге модели: $special"; }
+
+    printf '%s\n' "$MANIFEST_NAME" >> "$listed"
+    extra="$(cd "$dir" && find . -type f | sed 's|^\./||' | sort | comm -23 - <(sort -u "$listed") | head -3)"
+    rm -f "$listed"
+    [ -z "$extra" ] || die "$label: файл вне manifest в каталоге модели: $(printf '%s' "$extra" | tr '\n' ' ')"
+
+    printf 'модель проверена (%s): %d файлов, посторонних нет\n' "$label" "$index"
 }
 
 printf 'release-сборка\n'
