@@ -31,13 +31,15 @@ struct AppHotkeyTests {
         _ = machine.decide(keyCode: right, flags: downFlags, state: .ready)
         #expect(machine.decide(keyCode: right, flags: releasedFlags, state: .recording) == .swallow)
         #expect(!machine.isDown)
-        #expect(machine.decide(keyCode: right, flags: downFlags, state: .recording) == .swallowAndStopRecording)
+        #expect(
+            machine.decide(keyCode: right, flags: downFlags, state: .recording) == .swallowAndStopRecording)
     }
 
     @Test("Левая Command и прочие клавиши проходят без изменений")
     func otherKeysPassThrough() {
         var machine = HotkeyMachine()
-        #expect(machine.decide(keyCode: leftCommandKeyCode, flags: 0x0010_0008, state: .ready) == .passThrough)
+        #expect(
+            machine.decide(keyCode: leftCommandKeyCode, flags: 0x0010_0008, state: .ready) == .passThrough)
         #expect(machine.decide(keyCode: 58, flags: 0x0008_0000, state: .ready) == .passThrough)
         #expect(machine.decide(keyCode: 0, flags: 0, state: .recording) == .passThrough)
         // Чужие клавиши не должны менять память о правой Command.
@@ -81,22 +83,26 @@ struct AppHotkeyTests {
         let down = HotkeyMachine.rightCommandFlag
         let up: UInt64 = 0
 
-        #expect(machine.decide(keyCode: HotkeyMachine.rightCommandKeyCode, flags: down, state: .ready)
-            == .swallowAndStartRecording)
+        #expect(
+            machine.decide(keyCode: HotkeyMachine.rightCommandKeyCode, flags: down, state: .ready)
+                == .swallowAndStartRecording)
         // Отпускание потеряно — событие с flags == up сюда не пришло.
         #expect(machine.isDown)
 
         // Следующее нажатие выглядит как удержание и поглощается: запись не остановить.
-        #expect(machine.decide(keyCode: HotkeyMachine.rightCommandKeyCode, flags: down, state: .recording)
-            == .swallow)
+        #expect(
+            machine.decide(keyCode: HotkeyMachine.rightCommandKeyCode, flags: down, state: .recording)
+                == .swallow)
 
         // Сброс машины при обратном включении перехвата возвращает управление.
         machine = HotkeyMachine()
-        #expect(machine.decide(keyCode: HotkeyMachine.rightCommandKeyCode, flags: down, state: .recording)
-            == .swallowAndStopRecording)
+        #expect(
+            machine.decide(keyCode: HotkeyMachine.rightCommandKeyCode, flags: down, state: .recording)
+                == .swallowAndStopRecording)
         // Контроль: нормальный цикл с отпусканием не залипает.
-        #expect(machine.decide(keyCode: HotkeyMachine.rightCommandKeyCode, flags: up, state: .ready)
-            == .swallow)
+        #expect(
+            machine.decide(keyCode: HotkeyMachine.rightCommandKeyCode, flags: up, state: .ready)
+                == .swallow)
         #expect(!machine.isDown)
     }
 }

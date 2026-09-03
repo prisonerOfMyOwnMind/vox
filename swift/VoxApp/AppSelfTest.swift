@@ -11,7 +11,8 @@ public enum AppSelfTest {
                     return "connect(2) на 1.1.1.1:80 прошёл — запрет не действует"
                 }
                 guard code == EPERM else {
-                    return "connect(2) отклонён с errno=\(code) (\(String(cString: strerror(code)))), ожидался EPERM"
+                    return
+                        "connect(2) отклонён с errno=\(code) (\(String(cString: strerror(code)))), ожидался EPERM"
                 }
                 return nil
             },
@@ -29,7 +30,8 @@ public enum AppSelfTest {
                 for kind in PermissionKind.allCases where !report.line(for: kind).hasPrefix(kind.title) {
                     return "строка про \(kind.rawValue) не начинается с названия разрешения"
                 }
-                let denied = PermissionsReport(microphone: .denied, accessibility: .granted, inputMonitoring: .notDetermined)
+                let denied = PermissionsReport(
+                    microphone: .denied, accessibility: .granted, inputMonitoring: .notDetermined)
                 guard denied.missing == [.microphone, .inputMonitoring] else {
                     return "список недостающих неверен: \(denied.missing.map(\.rawValue))"
                 }
@@ -37,7 +39,7 @@ public enum AppSelfTest {
                     return "строка не говорит, что нажать"
                 }
                 return nil
-            },
+            }
         ]
     }
 

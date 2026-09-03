@@ -75,7 +75,8 @@ public struct PermissionsReport: Sendable, Equatable {
     public let accessibility: PermissionState
     public let inputMonitoring: PermissionState
 
-    public init(microphone: PermissionState, accessibility: PermissionState, inputMonitoring: PermissionState) {
+    public init(microphone: PermissionState, accessibility: PermissionState, inputMonitoring: PermissionState)
+    {
         self.microphone = microphone
         self.accessibility = accessibility
         self.inputMonitoring = inputMonitoring

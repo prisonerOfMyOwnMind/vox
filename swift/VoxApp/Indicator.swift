@@ -113,10 +113,11 @@ final class IndicatorWindow {
         guard let screen = NSScreen.main ?? NSScreen.screens.first else { return }
         let frame = screen.frame
         let size = panel.frame.size
-        panel.setFrameOrigin(NSPoint(
-            x: frame.midX - size.width / 2,
-            y: frame.maxY - size.height - 16
-        ))
+        panel.setFrameOrigin(
+            NSPoint(
+                x: frame.midX - size.width / 2,
+                y: frame.maxY - size.height - 16
+            ))
     }
 }
 
@@ -131,7 +132,8 @@ private final class IndicatorView: NSView {
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
     override func draw(_ dirtyRect: NSRect) {
-        let capsule = NSBezierPath(roundedRect: bounds, xRadius: bounds.height / 2, yRadius: bounds.height / 2)
+        let capsule = NSBezierPath(
+            roundedRect: bounds, xRadius: bounds.height / 2, yRadius: bounds.height / 2)
         NSColor(calibratedWhite: 0.08, alpha: 0.88).setFill()
         capsule.fill()
 
@@ -141,7 +143,8 @@ private final class IndicatorView: NSView {
         let maxHeight = bounds.height - 16
         var x = bounds.midX - total / 2
 
-        let color = mode == .recording
+        let color =
+            mode == .recording
             ? NSColor(calibratedRed: 0.93, green: 0.20, blue: 0.20, alpha: 1)
             : NSColor(calibratedWhite: 0.55, alpha: 1)
         color.setFill()

@@ -16,14 +16,15 @@ do {
 let arguments = Array(CommandLine.arguments.dropFirst())
 
 func usage() -> Never {
-    print("""
-    Vox — локальная диктовка для macOS.
+    print(
+        """
+        Vox — локальная диктовка для macOS.
 
-      Vox                          запустить приложение в menu bar
-      Vox --self-test              служебные проверки без UI
-      Vox --transcribe-file <path> распознать файл, напечатать raw и normalized
-      Vox --regression <manifest>  прогнать набор fixtures и сохранить результаты
-    """)
+          Vox                          запустить приложение в menu bar
+          Vox --self-test              служебные проверки без UI
+          Vox --transcribe-file <path> распознать файл, напечатать raw и normalized
+          Vox --regression <manifest>  прогнать набор fixtures и сохранить результаты
+        """)
     exit(2)
 }
 

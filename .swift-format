@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "indentation": { "spaces": 4 },
+  "lineLength": 110,
+  "respectsExistingLineBreaks": true,
+  "lineBreakBeforeEachArgument": false,
+  "rules": {
+    "AlwaysUseLowerCamelCase": true,
+    "AmbiguousTrailingClosureOverload": true,
+    "NeverForceUnwrap": true,
+    "NeverUseImplicitlyUnwrappedOptionals": true,
+    "UseLetInEveryBoundCaseVariable": true,
+    "UseSynthesizedInitializer": false,
+    "AllPublicDeclarationsHaveDocumentation": false,
+    "AlwaysUseLiteralForEmptyCollectionInit": true,
+    "NoBlockComments": true,
+    "OneCasePerLine": true,
+    "ReturnVoidInsteadOfEmptyTuple": true,
+    "UseShorthandTypeNames": true
+  }
+}

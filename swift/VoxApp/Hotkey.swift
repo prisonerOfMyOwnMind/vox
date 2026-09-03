@@ -82,14 +82,16 @@ final class HotkeyMonitor {
             return decision == .passThrough ? Unmanaged.passUnretained(event) : nil
         }
 
-        guard let tap = CGEvent.tapCreate(
-            tap: .cgSessionEventTap,
-            place: .headInsertEventTap,
-            options: .defaultTap,
-            eventsOfInterest: mask,
-            callback: callback,
-            userInfo: Unmanaged.passUnretained(self).toOpaque()
-        ) else {
+        guard
+            let tap = CGEvent.tapCreate(
+                tap: .cgSessionEventTap,
+                place: .headInsertEventTap,
+                options: .defaultTap,
+                eventsOfInterest: mask,
+                callback: callback,
+                userInfo: Unmanaged.passUnretained(self).toOpaque()
+            )
+        else {
             throw VoxError.permissionDenied(
                 "\(PermissionKind.inputMonitoring.title). \(PermissionKind.inputMonitoring.settingsPath)")
         }
@@ -117,8 +119,10 @@ final class HotkeyMonitor {
     private func handle(typeRawValue: UInt32, keyCode: Int64, flags: UInt64) -> HotkeyDecision {
         // Система выключает tap по таймауту или по потоку ввода: включаем обратно.
         if typeRawValue == CGEventType.tapDisabledByTimeout.rawValue
-            || typeRawValue == CGEventType.tapDisabledByUserInput.rawValue {
-            let reason = typeRawValue == CGEventType.tapDisabledByTimeout.rawValue
+            || typeRawValue == CGEventType.tapDisabledByUserInput.rawValue
+        {
+            let reason =
+                typeRawValue == CGEventType.tapDisabledByTimeout.rawValue
                 ? "таймаут обработчика" : "поток ввода"
             AppLog.problem("перехват клавиатуры отключён системой (\(reason)), включаю обратно")
 
@@ -138,8 +142,8 @@ final class HotkeyMonitor {
         if keyCode == HotkeyMachine.rightCommandKeyCode {
             AppLog.note(
                 "правая Command: \(machine.isDown ? "нажата" : "отпущена")"
-                + ", было \(wasDown ? "нажата" : "отпущена")"
-                + ", состояние \(state.rawValue) -> \(decision)")
+                    + ", было \(wasDown ? "нажата" : "отпущена")"
+                    + ", состояние \(state.rawValue) -> \(decision)")
         }
 
         if decision != .passThrough {

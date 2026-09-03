@@ -112,12 +112,17 @@ public enum CleanEntry {
         return formatter.string(from: date)
     }
 
+    /// Метка времени для имени файла отчёта.
+    /// Без принудительных развёрток: падение при сохранении отчёта обесценило бы
+    /// весь прогон, а он к этому моменту уже отработал.
     private static func compactStamp(_ date: Date) -> String {
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
-        let p = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: date)
+        if let utc = TimeZone(secondsFromGMT: 0) { calendar.timeZone = utc }
+        let parts = calendar.dateComponents(
+            [.year, .month, .day, .hour, .minute, .second], from: date)
         return String(
             format: "%04d%02d%02dT%02d%02d%02dZ",
-            p.year!, p.month!, p.day!, p.hour!, p.minute!, p.second!)
+            parts.year ?? 0, parts.month ?? 0, parts.day ?? 0,
+            parts.hour ?? 0, parts.minute ?? 0, parts.second ?? 0)
     }
 }

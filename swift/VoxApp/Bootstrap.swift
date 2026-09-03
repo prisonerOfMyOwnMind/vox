@@ -8,16 +8,17 @@ public enum Bootstrap {
     /// Запрет накрывает и unix-сокеты, поэтому обращение к mDNSResponder тоже
     /// закрыто и имена не резолвятся.
     static let profile = """
-    (version 1)
-    (allow default)
-    (deny network-outbound)
-    """
+        (version 1)
+        (allow default)
+        (deny network-outbound)
+        """
 
     static let mechanism = "seatbelt sandbox_init: deny network-outbound"
 
-    private typealias SandboxInit = @convention(c) (
-        UnsafePointer<CChar>?, UInt64, UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
-    ) -> Int32
+    private typealias SandboxInit =
+        @convention(c) (
+            UnsafePointer<CChar>?, UInt64, UnsafeMutablePointer<UnsafeMutablePointer<CChar>?>?
+        ) -> Int32
     private typealias SandboxFreeError = @convention(c) (UnsafeMutablePointer<CChar>?) -> Void
 
     /// RTLD_DEFAULT на Darwin.

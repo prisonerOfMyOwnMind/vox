@@ -68,10 +68,13 @@ struct CleanFixtureManifestTests {
 
     @Test("Набор покрывает то, что должен проверять")
     func coverageTagsPresent() throws {
-        let tags = Set(try Layout.manifest(at: Layout.fixturesDirectory)
-            .fixtures.flatMap(\.tags))
-        for required in ["russian", "terms", "filler", "self-correction", "repeat",
-                         "enumeration", "injection"] {
+        let tags = Set(
+            try Layout.manifest(at: Layout.fixturesDirectory)
+                .fixtures.flatMap(\.tags))
+        for required in [
+            "russian", "terms", "filler", "self-correction", "repeat",
+            "enumeration", "injection",
+        ] {
             #expect(tags.contains(required), "нет покрытия для тега \(required)")
         }
     }
@@ -79,8 +82,9 @@ struct CleanFixtureManifestTests {
     @Test("Эталонные тексты устойчивы к нормализации")
     func expectedTextsAreNormalisationStable() throws {
         for fixture in try Layout.manifest(at: Layout.fixturesDirectory).fixtures {
-            #expect(Normalizer().normalize(fixture.expected) == fixture.expected,
-                    "нормализатор меняет эталон \(fixture.audio)")
+            #expect(
+                Normalizer().normalize(fixture.expected) == fixture.expected,
+                "нормализатор меняет эталон \(fixture.audio)")
         }
     }
 
@@ -105,9 +109,10 @@ struct CleanRegressionRunnerTests {
 
         // Свой manifest на одном настоящем файле: числа в отчёте посчитаны вручную.
         let manifest = FixtureManifest(fixtures: [
-            FixtureEntry(audio: "audio/dev-02.wav",
-                         expected: "Поднимаем Docker",
-                         tags: ["synthetic", "terms"])
+            FixtureEntry(
+                audio: "audio/dev-02.wav",
+                expected: "Поднимаем Docker",
+                tags: ["synthetic", "terms"])
         ])
         let manifestURL = staged.appendingPathComponent("one.json")
         try JSONEncoder().encode(manifest).write(to: manifestURL)

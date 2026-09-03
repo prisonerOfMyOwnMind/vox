@@ -44,7 +44,8 @@ final class AppController: NSObject, NSApplicationDelegate {
     private let normalizer: any Normalizing = Normalizer()
 
     private var hotkey: HotkeyMonitor?
-    private var permissions = PermissionsReport(microphone: .denied, accessibility: .denied, inputMonitoring: .denied)
+    private var permissions = PermissionsReport(
+        microphone: .denied, accessibility: .denied, inputMonitoring: .denied)
     private var state: AppState = .starting
     private var message: String?
 
@@ -130,7 +131,7 @@ final class AppController: NSObject, NSApplicationDelegate {
         indicator.showProcessing()
         AppLog.note(
             "запись остановлена: \(String(format: "%.2f", samples.durationSeconds)) с, "
-            + "буферов принято \(outcome.acceptedBuffers), отброшено \(outcome.droppedBuffers)")
+                + "буферов принято \(outcome.acceptedBuffers), отброшено \(outcome.droppedBuffers)")
 
         // Тракт звука сломался посреди записи — например, сменилось устройство
         // входа. Молчать нельзя, и нельзя валить это на длительность: причина
@@ -271,7 +272,8 @@ final class AppController: NSObject, NSApplicationDelegate {
 
     @objc private func menuRequest(_ sender: NSMenuItem) {
         guard let raw = sender.representedObject as? String,
-              let kind = PermissionKind(rawValue: raw) else { return }
+            let kind = PermissionKind(rawValue: raw)
+        else { return }
         PermissionsCheck.request(kind) { [weak self] in self?.recheckPermissions() }
     }
 

@@ -33,7 +33,11 @@ struct CoreContractsTests {
             modelRepo: Pins.modelRepo,
             modelRevision: Pins.modelRevision,
             generatedAt: "2026-09-03T00:00:00Z",
-            entries: [.init(path: "Decoder.mlmodelc/coremldata.bin", sizeBytes: 554, sha256: String(repeating: "a", count: 64))]
+            entries: [
+                .init(
+                    path: "Decoder.mlmodelc/coremldata.bin", sizeBytes: 554,
+                    sha256: String(repeating: "a", count: 64))
+            ]
         )
         let data = try JSONEncoder().encode(manifest)
         #expect(try JSONDecoder().decode(ModelManifest.self, from: data) == manifest)

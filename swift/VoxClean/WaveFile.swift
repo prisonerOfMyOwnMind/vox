@@ -42,8 +42,8 @@ enum WaveFile {
         }
         let bytes = [UInt8](data)
         guard bytes.count >= 12,
-              ascii(bytes, 0, 4) == "RIFF",
-              ascii(bytes, 8, 4) == "WAVE"
+            ascii(bytes, 0, 4) == "RIFF",
+            ascii(bytes, 8, 4) == "WAVE"
         else {
             throw RegressionError.audioUnsupported(path: path, detail: "не RIFF/WAVE")
         }
@@ -89,7 +89,7 @@ enum WaveFile {
 
         switch (format.code, format.bits) {
         case (3, 32):
-            var values = [Float]()
+            var values: [Float] = []
             values.reserveCapacity(payload.count / 4)
             var index = payload.startIndex
             while index + 4 <= payload.endIndex {
@@ -98,7 +98,7 @@ enum WaveFile {
             }
             return AudioSamples(values: values)
         case (1, 16):
-            var values = [Float]()
+            var values: [Float] = []
             values.reserveCapacity(payload.count / 2)
             var index = payload.startIndex
             while index + 2 <= payload.endIndex {

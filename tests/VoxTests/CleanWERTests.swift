@@ -15,8 +15,9 @@ struct CleanWERTests {
     func knownRussianPair() {
         let reference = "поднимаем докер и настраиваем nginx"
         let hypothesis = "поднимаем докер настраиваем nginx на порту"
-        #expect(WordErrorRate.distance(
-            WordErrorRate.words(reference), WordErrorRate.words(hypothesis)) == 3)
+        #expect(
+            WordErrorRate.distance(
+                WordErrorRate.words(reference), WordErrorRate.words(hypothesis)) == 3)
         #expect(WordErrorRate.rate(reference: reference, hypothesis: hypothesis) == 0.6)
     }
 
@@ -35,10 +36,12 @@ struct CleanWERTests {
 
     @Test("Регистр и пунктуация по краям слова на счёт не влияют")
     func tokenisation() {
-        #expect(WordErrorRate.words("Поднимаем Docker, потом — Nginx!")
-            == ["поднимаем", "docker", "потом", "nginx"])
-        #expect(WordErrorRate.rate(
-            reference: "Поднимаем Docker.", hypothesis: "поднимаем docker") == 0.0)
+        #expect(
+            WordErrorRate.words("Поднимаем Docker, потом — Nginx!")
+                == ["поднимаем", "docker", "потом", "nginx"])
+        #expect(
+            WordErrorRate.rate(
+                reference: "Поднимаем Docker.", hypothesis: "поднимаем docker") == 0.0)
     }
 
     @Test("Гипотеза длиннее эталона может дать больше единицы")

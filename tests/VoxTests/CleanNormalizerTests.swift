@@ -26,8 +26,9 @@ struct CleanNormalizerAllowedTests {
     func leadingFillerKeepsSentenceCapital() {
         // Удаление уронило бы регистр следующего слова, а поднимать регистр
         // запрещено закрытым набором преобразований (owner-решение 2026-09-03).
-        #expect(Normalizer().normalize("Ээ, нам нужно, мм, собрать проект.")
-            == "Ээ, нам нужно, собрать проект.")
+        #expect(
+            Normalizer().normalize("Ээ, нам нужно, мм, собрать проект.")
+                == "Ээ, нам нужно, собрать проект.")
         #expect(Normalizer().normalize("Эм ладно") == "Эм ладно")
         // Строчный паразит в начале удаляется как обычно: терять нечего.
         #expect(Normalizer().normalize("ээ нам нужно") == "нам нужно")
@@ -43,8 +44,9 @@ struct CleanNormalizerAllowedTests {
 
     @Test("Подряд идущий дубль длинного слова схлопывается")
     func duplicateCollapsed() {
-        #expect(Normalizer().normalize("Нужно перезапустить перезапустить сервис.")
-            == "Нужно перезапустить сервис.")
+        #expect(
+            Normalizer().normalize("Нужно перезапустить перезапустить сервис.")
+                == "Нужно перезапустить сервис.")
         #expect(Normalizer().normalize("проверь Docker docker сейчас") == "проверь Docker сейчас")
     }
 
@@ -59,8 +61,9 @@ struct CleanNormalizerAllowedTests {
     @Test("Каноническое написание каждого термина устойчиво к повторному проходу")
     func termsAreIdempotent() {
         for canonical in Set(Normalizer.terms.values) {
-            #expect(Normalizer.terms[canonical.lowercased()] == canonical,
-                    "термин \(canonical) не отображается сам в себя")
+            #expect(
+                Normalizer.terms[canonical.lowercased()] == canonical,
+                "термин \(canonical) не отображается сам в себя")
             #expect(Normalizer().normalize(canonical) == canonical)
         }
     }

@@ -84,7 +84,10 @@ public struct Normalizer: Normalizing {
         if squashed.count >= 2, squashed.allSatisfy({ $0 == "м" }) { return true }
         // «эм», «эмм»
         if squashed.count >= 2, squashed.first == "э",
-           squashed.dropFirst().allSatisfy({ $0 == "м" }) { return true }
+            squashed.dropFirst().allSatisfy({ $0 == "м" })
+        {
+            return true
+        }
         return false
     }
 

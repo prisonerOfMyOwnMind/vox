@@ -18,7 +18,8 @@ struct AppPermissionsTests {
 
     @Test("Список недостающих содержит только невыданные")
     func missingListsOnlyUngranted() {
-        let report = PermissionsReport(microphone: .granted, accessibility: .denied, inputMonitoring: .notDetermined)
+        let report = PermissionsReport(
+            microphone: .granted, accessibility: .denied, inputMonitoring: .notDetermined)
         #expect(report.missing == [.accessibility, .inputMonitoring])
         #expect(!report.allGranted)
         #expect(report.summary.contains(PermissionKind.accessibility.title))
@@ -27,7 +28,8 @@ struct AppPermissionsTests {
 
     @Test("Выданные разрешения дают короткую строку без инструкции")
     func grantedLineIsShort() {
-        let report = PermissionsReport(microphone: .granted, accessibility: .granted, inputMonitoring: .granted)
+        let report = PermissionsReport(
+            microphone: .granted, accessibility: .granted, inputMonitoring: .granted)
         #expect(report.allGranted)
         #expect(report.missing.isEmpty)
         for kind in PermissionKind.allCases {
@@ -38,7 +40,8 @@ struct AppPermissionsTests {
 
     @Test("Невыданное разрешение говорит, чего не хватает и что нажать")
     func missingLineTellsWhatToPress() {
-        let report = PermissionsReport(microphone: .denied, accessibility: .granted, inputMonitoring: .granted)
+        let report = PermissionsReport(
+            microphone: .denied, accessibility: .granted, inputMonitoring: .granted)
         let line = report.line(for: .microphone)
         #expect(line.hasPrefix("Микрофон: нет"))
         #expect(line.contains(PermissionKind.microphone.purpose))

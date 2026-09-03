@@ -51,7 +51,8 @@ public enum Paste {
     ) async throws {
         guard AXIsProcessTrusted() else {
             throw VoxError.pasteFailed(
-                "нет разрешения «\(PermissionKind.accessibility.title)». \(PermissionKind.accessibility.settingsPath)")
+                "нет разрешения «\(PermissionKind.accessibility.title)». \(PermissionKind.accessibility.settingsPath)"
+            )
         }
 
         let snapshot = ClipboardSnapshot.capture(from: pasteboard)
@@ -84,7 +85,8 @@ public enum Paste {
             throw VoxError.pasteFailed("система не выдала источник событий")
         }
         guard let down = CGEvent(keyboardEventSource: source, virtualKey: keyV, keyDown: true),
-              let up = CGEvent(keyboardEventSource: source, virtualKey: keyV, keyDown: false) else {
+            let up = CGEvent(keyboardEventSource: source, virtualKey: keyV, keyDown: false)
+        else {
             throw VoxError.pasteFailed("система не выдала событие клавиатуры")
         }
         down.flags = .maskCommand

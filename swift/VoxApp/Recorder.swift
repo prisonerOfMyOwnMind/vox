@@ -32,7 +32,10 @@ private final class SampleSink: @unchecked Sendable {
     private let ratio: Double
     private let onLevel: @Sendable (Float) -> Void
 
-    init(converter: AVAudioConverter, target: AVAudioFormat, ratio: Double, onLevel: @escaping @Sendable (Float) -> Void) {
+    init(
+        converter: AVAudioConverter, target: AVAudioFormat, ratio: Double,
+        onLevel: @escaping @Sendable (Float) -> Void
+    ) {
         self.converter = converter
         self.target = target
         self.ratio = ratio
@@ -92,7 +95,8 @@ private final class SampleSink: @unchecked Sendable {
             lock.lock()
             dropped += 1
             if firstFailure == nil {
-                firstFailure = error.map { "преобразование звука отказало: \($0.localizedDescription)" }
+                firstFailure =
+                    error.map { "преобразование звука отказало: \($0.localizedDescription)" }
                     ?? "преобразование звука не дало кадров"
             }
             lock.unlock()
@@ -159,12 +163,14 @@ final class AudioRecorder {
         guard inputFormat.sampleRate > 0, inputFormat.channelCount > 0 else {
             throw VoxError.transcriptionFailed("вход микрофона не отдал формат: устройство недоступно")
         }
-        guard let target = AVAudioFormat(
-            commonFormat: .pcmFormatFloat32,
-            sampleRate: AudioSamples.sampleRate,
-            channels: AVAudioChannelCount(AudioSamples.channelCount),
-            interleaved: false
-        ), let converter = AVAudioConverter(from: inputFormat, to: target) else {
+        guard
+            let target = AVAudioFormat(
+                commonFormat: .pcmFormatFloat32,
+                sampleRate: AudioSamples.sampleRate,
+                channels: AVAudioChannelCount(AudioSamples.channelCount),
+                interleaved: false
+            ), let converter = AVAudioConverter(from: inputFormat, to: target)
+        else {
             throw VoxError.transcriptionFailed(
                 "нет преобразования \(inputFormat.sampleRate) Гц в \(AudioSamples.sampleRate) Гц")
         }
@@ -199,7 +205,7 @@ final class AudioRecorder {
         isRecording = true
         AppLog.note(
             "запись начата: вход \(Int(inputFormat.sampleRate)) Гц / "
-            + "\(inputFormat.channelCount) кан. -> \(Int(target.sampleRate)) Гц / моно")
+                + "\(inputFormat.channelCount) кан. -> \(Int(target.sampleRate)) Гц / моно")
     }
 
     /// Останавливает запись и отдаёт накопленное ровно один раз. Копилка очищается здесь,
@@ -217,7 +223,8 @@ final class AudioRecorder {
     @discardableResult
     func stop() -> Outcome {
         guard isRecording, let engine, let sink else {
-            return Outcome(samples: AudioSamples(values: []), acceptedBuffers: 0, droppedBuffers: 0, failure: nil)
+            return Outcome(
+                samples: AudioSamples(values: []), acceptedBuffers: 0, droppedBuffers: 0, failure: nil)
         }
         let taken = sink.closeAndTake()
         engine.inputNode.removeTap(onBus: 0)
