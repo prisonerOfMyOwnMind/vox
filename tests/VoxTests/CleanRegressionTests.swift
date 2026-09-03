@@ -257,11 +257,32 @@ struct CleanWaveFileTests {
     func durationMatchesSampleCount() throws {
         let audio = Layout.fixturesDirectory.appendingPathComponent("audio/dev-01.wav")
         let samples = try WaveFile.read(at: audio)
-        // Раньше здесь стояло `durationSeconds == count / 16_000` — это дословно
-        // тело самого свойства, тождество, зелёное при любом входе, включая
-        // пустой. Прочитанный файл в утверждении не участвовал вовсе.
-        // Теперь сверяем с фактической длительностью записи.
-        #expect(samples.values.count == 44_712)
-        #expect(abs(samples.durationSeconds - 2.7945) < 0.001)
+        // Не тождество и не константа. Раньше здесь сравнивалось
+        // `durationSeconds == count / 16_000` — это дословно тело самого
+        // свойства, зелёное при любом входе. Потом стояли жёсткие числа, и они
+        // сломались при перегенерации набора.
+        //
+        // Теперь читаем размер звуковых данных прямо из заголовка RIFF и
+        // сверяем с тем, что вернул читатель: независимый источник, не
+        // зависящий ни от реализации, ни от конкретной записи.
+        let raw = try Data(contentsOf: audio)
+        let dataChunkBytes = try #require(riffDataChunkSize(in: raw))
+        #expect(samples.values.count == dataChunkBytes / 4)  // Float32
+        #expect(samples.durationSeconds >= 20, "запись короче требуемых 20 секунд")
+        #expect(samples.durationSeconds <= 60, "запись длиннее требуемых 60 секунд")
     }
+}
+
+/// Размер звуковых данных из заголовка RIFF. Независимый от читателя источник.
+private func riffDataChunkSize(in file: Data) -> Int? {
+    guard file.count > 12, file.prefix(4) == Data("RIFF".utf8) else { return nil }
+    var offset = 12
+    while offset + 8 <= file.count {
+        let id = file.subdata(in: offset..<(offset + 4))
+        let size = file.subdata(in: (offset + 4)..<(offset + 8))
+            .withUnsafeBytes { $0.loadUnaligned(as: UInt32.self).littleEndian }
+        if id == Data("data".utf8) { return Int(size) }
+        offset += 8 + Int(size) + (Int(size) % 2)
+    }
+    return nil
 }
